@@ -35,5 +35,4 @@ app.include_router(chores.router)
 @app.get("/health")
 async def health_check():
     logger.info("Health check endpoint accessed")
-    #return {"status": "healthy"}
-    return {"status": "error"}, 500
+    return {"status": "healthy"}

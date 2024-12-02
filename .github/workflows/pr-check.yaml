@@ -1,0 +1,59 @@
+# .github/workflows/pr-checks.yml
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: chores_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio httpx
+
+    - name: Build and run application container
+      run: |
+        docker build -t chores-app .
+        docker run -d \
+          -e DB_HOST=localhost \
+          -e DB_USER=root \
+          -e DB_PASSWORD=test_password \
+          -e DB_NAME=chores_db \
+          -p 8000:8000 \
+          chores-app
+
+    - name: Wait for application to be ready
+      run: |
+        timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8000/health)" != "200" ]]; do sleep 2; done' || false
+
+    - name: Run integration tests
+      env:
+        API_BASE_URL: http://localhost:8000
+      run: |
+        pytest app/integration_tests -v

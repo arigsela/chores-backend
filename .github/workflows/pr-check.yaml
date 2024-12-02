@@ -1,10 +1,8 @@
 # .github/workflows/pr-checks.yml
 name: PR Checks
-
 on:
   pull_request:
     branches: [ main ]
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -40,13 +38,24 @@ jobs:
     - name: Build and run application container
       run: |
         docker build -t chores-app .
-        docker run -d \
-          -e DB_HOST=localhost \
+        CONTAINER_ID=$(docker run -d \
+          -e DB_HOST=127.0.0.1 \
           -e DB_USER=root \
           -e DB_PASSWORD=test_password \
           -e DB_NAME=chores_db \
           -p 8000:8000 \
-          chores-app
+          --network host \
+          chores-app)
+        echo "CONTAINER_ID=$CONTAINER_ID" >> $GITHUB_ENV
+        sleep 5
+        docker logs $CONTAINER_ID
+
+    - name: Check container status
+      run: |
+        echo "Container status:"
+        docker ps -a
+        echo "Container logs:"
+        docker logs ${{ env.CONTAINER_ID }}
 
     - name: Wait for application to be ready
       run: |
@@ -57,3 +66,11 @@ jobs:
         API_BASE_URL: http://localhost:8000
       run: |
         pytest app/integration_tests -v
+
+    # Add cleanup step
+    - name: Cleanup
+      if: always()
+      run: |
+        docker logs ${{ env.CONTAINER_ID }} || true
+        docker stop ${{ env.CONTAINER_ID }} || true
+        docker rm ${{ env.CONTAINER_ID }} || true

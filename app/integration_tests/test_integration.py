@@ -80,10 +80,16 @@ def test_full_chores_workflow(api_client, cleanup_registry):
 
 
     # 3. Assign weekly chores
+    week_start = datetime.now().date().isoformat()
     assign_response = api_client.post(
-        f'/api/weekly-assignments/?child_id={child_id}',
-        json=chore_ids
+        '/api/weekly-assignments/',
+        json={
+            "child_id": child_id,
+            "chore_ids": chore_ids,
+            "week_start": week_start
+        }
     )
+    
     assert assign_response.status_code == 200
     assignments = assign_response.json()
     assert len(assignments) == len(chores)
@@ -114,9 +120,14 @@ def test_error_handling(api_client):
     assert response.status_code == 404
 
     # Test invalid chore assignment
+    week_start = datetime.now().date().isoformat()
     response = api_client.post(
-        '/api/weekly-assignments/?child_id=99999',
-        json=[1, 2, 3]
+    '/api/weekly-assignments/',
+    json={
+        "child_id": 99999,
+        "chore_ids": [1, 2, 3],
+        "week_start": week_start
+    }
     )
     assert response.status_code == 404
 
@@ -143,10 +154,16 @@ def test_concurrent_assignments(api_client, cleanup_registry):
         cleanup_registry.register_chore(chore_id)  # Register each chore
 
     # Assign all chores at once
+    week_start = datetime.now().date().isoformat()
     assign_response = api_client.post(
-        f'/api/weekly-assignments/?child_id={child_id}',
-        json=chore_ids
+        '/api/weekly-assignments/',
+        json={
+            "child_id": child_id,
+            "chore_ids": chore_ids,
+            "week_start": week_start
+        }
     )
+    
     assert assign_response.status_code == 200
     assignments = assign_response.json()
     for assignment in assignments:
@@ -172,9 +189,15 @@ def test_weekly_boundaries(api_client, cleanup_registry):
     cleanup_registry.register_chore(chore_id)  # Register chore
 
     # Assign chore
+    week_start = datetime.now().date().isoformat()
     assign_response = api_client.post(
-        f'/api/weekly-assignments/?child_id={child_id}',
-        json=[chore_id]
+        '/api/weekly-assignments/',
+        json={
+            "child_id": child_id,
+            "chore_ids": [chore_id],
+            "week_start": week_start
+        }
     )
+    
     for assignment in assign_response.json():
         cleanup_registry.register_assignment(assignment['id'])  # Register assignments

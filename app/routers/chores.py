@@ -54,19 +54,20 @@ def get_chore(chore_id: int, db: Session = Depends(get_db)):
 
 # Weekly Assignments endpoints
 @router.post("/weekly-assignments/", response_model=List[schemas.ChoreAssignment])
-def assign_weekly_chores(child_id: int, chore_ids: List[int], db: Session = Depends(get_db)):
-    """Assign chores to a child for the current week"""
-    # Verify child exists
-    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+def assign_weekly_chores(
+    assignment: schemas.ChoreAssignmentCreate,
+    db: Session = Depends(get_db)
+):
+    child = db.query(models.Child).filter(models.Child.id == assignment.child_id).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
-    # Calculate the start of the current week (assuming Monday is start)
-    today = date.today()
-    week_start = today - timedelta(days=today.weekday())
-    
+    # Extract fields from the request body
+    child_id = assignment.child_id
+    week_start = assignment.week_start
+
     assignments = []
-    for chore_id in chore_ids:
+    for chore_id in assignment.chore_ids:
         # Verify chore exists
         chore = db.query(models.Chore).filter(models.Chore.id == chore_id).first()
         if not chore:
@@ -81,19 +82,20 @@ def assign_weekly_chores(child_id: int, chore_ids: List[int], db: Session = Depe
         ).first()
         
         if not existing:
-            assignment = models.ChoreAssignment(
+            new_assignment = models.ChoreAssignment(
                 child_id=child_id,
                 chore_id=chore_id,
                 week_start_date=week_start
             )
-            db.add(assignment)
-            assignments.append(assignment)
+            db.add(new_assignment)
+            assignments.append(new_assignment)
     
     db.commit()
-    for assignment in assignments:
-        db.refresh(assignment)
+    for a in assignments:
+        db.refresh(a)
     
     return assignments
+
 
 @router.get("/weekly-assignments/{child_id}", response_model=List[schemas.ChoreAssignment])
 def get_weekly_assignments(

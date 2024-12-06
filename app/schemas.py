@@ -2,6 +2,11 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import date
 
+class ChoreAssignmentCreate(BaseModel):
+    child_id: int
+    chore_ids: List[int]
+    week_start: date
+
 class ChoreBase(BaseModel):
     name: str
     description: str
@@ -20,9 +25,6 @@ class ChoreAssignmentBase(BaseModel):
     chore_id: int
     child_id: int
     week_start_date: date
-
-class ChoreAssignmentCreate(ChoreAssignmentBase):
-    pass
 
 class ChoreAssignment(ChoreAssignmentBase):
     id: int

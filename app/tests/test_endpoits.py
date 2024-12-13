@@ -33,14 +33,12 @@ def test_create_chore(client):
         "/api/chores/",
         json={
             "name": "Feed Pet",
-            "description": "Feed the pet and refresh water",
-            "points": 2
+            "description": "Feed the pet and refresh water"
         }
     )
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "Feed Pet"
-    assert data["points"] == 2
 
 def test_get_chores(client, sample_data):
     response = client.get("/api/chores/")
@@ -53,9 +51,17 @@ def test_assign_weekly_chores(client, sample_data):
     child_id = sample_data["children"]["alice"].id
     chore_ids = [chore.id for chore in sample_data["chores"]]
     
+    # Create the proper request payload
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    
     response = client.post(
-        f"/api/weekly-assignments/?child_id={child_id}",
-        json=chore_ids
+        "/api/weekly-assignments/",  # Remove the query parameter
+        json={
+            "child_id": child_id,
+            "chore_ids": chore_ids,
+            "week_start": week_start.isoformat()  # Convert date to string
+        }
     )
     assert response.status_code == 200
     data = response.json()
@@ -102,9 +108,16 @@ def test_complete_nonexistent_assignment(client):
     assert response.status_code == 404
 
 def test_assign_chores_to_nonexistent_child(client):
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    
     response = client.post(
-        "/api/weekly-assignments/?child_id=999",
-        json=[1, 2, 3]
+        "/api/weekly-assignments/",
+        json={
+            "child_id": 999,  # Non-existent ID
+            "chore_ids": [1, 2, 3],
+            "week_start": week_start.isoformat()
+        }
     )
     assert response.status_code == 404
 
@@ -125,17 +138,23 @@ def test_full_workflow(client):
     # 2. Create some chores
     chore_ids = []
     for chore_data in [
-        {"name": "Study", "description": "Do homework", "points": 4},
-        {"name": "Exercise", "description": "30 minutes activity", "points": 3}
+        {"name": "Study", "description": "Do homework"},
+        {"name": "Exercise", "description": "30 minutes activity"}
     ]:
         chore_response = client.post("/api/chores/", json=chore_data)
         assert chore_response.status_code == 200
         chore_ids.append(chore_response.json()["id"])
 
     # 3. Assign chores to child
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
     assign_response = client.post(
-        f"/api/weekly-assignments/?child_id={child_id}",
-        json=chore_ids
+        "/api/weekly-assignments/",
+        json={
+            "child_id": child_id,
+            "chore_ids": chore_ids,
+            "week_start": week_start.isoformat()
+        }
     )
     assert assign_response.status_code == 200
     assignments = assign_response.json()

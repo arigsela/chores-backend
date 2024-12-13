@@ -10,7 +10,6 @@ class ChoreAssignmentCreate(BaseModel):
 class ChoreBase(BaseModel):
     name: str
     description: str
-    points: int
 
 class ChoreCreate(ChoreBase):
     pass

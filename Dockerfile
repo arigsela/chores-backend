@@ -13,7 +13,7 @@ COPY app/ app/
 # Default environment variables
 ENV DB_HOST=mysql \
     DB_PORT=3306 \
-    DB_NAME=chores_db
+    DB_NAME=chores-db
 
 # Expose port
 EXPOSE 8000

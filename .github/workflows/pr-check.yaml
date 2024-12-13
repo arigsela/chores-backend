@@ -12,7 +12,7 @@ jobs:
         image: mysql:5.7
         env:
           MYSQL_ROOT_PASSWORD: test_password
-          MYSQL_DATABASE: chores_db
+          MYSQL_DATABASE: chores-db
         ports:
           - 3306:3306
         options: >-
@@ -42,7 +42,7 @@ jobs:
           -e DB_HOST=127.0.0.1 \
           -e DB_USER=root \
           -e DB_PASSWORD=test_password \
-          -e DB_NAME=chores_db \
+          -e DB_NAME=chores-db \
           -p 8000:8000 \
           --network host \
           chores-app)
@@ -67,7 +67,7 @@ jobs:
         DB_HOST: 127.0.0.1
         DB_USER: root
         DB_PASSWORD: test_password
-        DB_NAME: chores_db
+        DB_NAME: chores-db
         DB_PORT: 3306
       run: |
         pytest app/integration_tests -v

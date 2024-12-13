@@ -18,7 +18,6 @@ class Chore(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100))
     description = Column(String(255))
-    points = Column(Integer)
     # Remove child relationship, will be connected through assignments
     assignments = relationship("ChoreAssignment", back_populates="chore")
 

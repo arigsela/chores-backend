@@ -62,40 +62,40 @@ def assign_weekly_chores(
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
-    # Extract fields from the request body
     child_id = assignment.child_id
     week_start = assignment.week_start
 
     assignments = []
     for chore_id in assignment.chore_ids:
-        # Verify chore exists
         chore = db.query(models.Chore).filter(models.Chore.id == chore_id).first()
         if not chore:
             logger.warning(f"Chore {chore_id} not found, skipping assignment")
             continue
 
-        # Check if assignment already exists for this week
-        existing = db.query(models.ChoreAssignment).filter(
-            models.ChoreAssignment.child_id == child_id,
-            models.ChoreAssignment.chore_id == chore_id,
-            models.ChoreAssignment.week_start_date == week_start
-        ).first()
-        
-        if not existing:
-            new_assignment = models.ChoreAssignment(
-                child_id=child_id,
-                chore_id=chore_id,
-                week_start_date=week_start
-            )
-            db.add(new_assignment)
-            assignments.append(new_assignment)
+        # Create multiple assignments based on frequency_per_week
+        for i in range(chore.frequency_per_week):
+            existing = db.query(models.ChoreAssignment).filter(
+                models.ChoreAssignment.child_id == child_id,
+                models.ChoreAssignment.chore_id == chore_id,
+                models.ChoreAssignment.week_start_date == week_start,
+                models.ChoreAssignment.occurrence_number == i + 1  # Track which occurrence this is
+            ).first()
+            
+            if not existing:
+                new_assignment = models.ChoreAssignment(
+                    child_id=child_id,
+                    chore_id=chore_id,
+                    week_start_date=week_start,
+                    occurrence_number=i + 1  # Add occurrence number
+                )
+                db.add(new_assignment)
+                assignments.append(new_assignment)
     
     db.commit()
     for a in assignments:
         db.refresh(a)
     
     return assignments
-
 
 @router.get("/weekly-assignments/{child_id}", response_model=List[schemas.ChoreAssignment])
 def get_weekly_assignments(

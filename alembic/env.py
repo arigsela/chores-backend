@@ -1,9 +1,11 @@
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import pool, exc
 from alembic import context
 from dotenv import load_dotenv
 import os
+import time
+from loguru import logger
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -20,27 +22,40 @@ config.set_section_option(section, "DB_HOST", os.getenv("DB_HOST", ""))
 config.set_section_option(section, "DB_PORT", os.getenv("DB_PORT", ""))
 config.set_section_option(section, "DB_NAME", os.getenv("DB_NAME", ""))
 
+# Add connection timeouts and pool settings
+config.set_section_option(section, "sqlalchemy.pool_timeout", "30")
+config.set_section_option(section, "sqlalchemy.pool_recycle", "60")
+
 # Interpret the config file for Python logging.
-# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
-# for 'autogenerate' support
 from app import models
 target_metadata = models.Base.metadata
 
+def connect_with_retries(engine, max_retries=3):
+    """Attempt to connect to the database with retries"""
+    last_exception = None
+    for i in range(max_retries):
+        try:
+            start_time = time.time()
+            connection = engine.connect()
+            logger.info(f"Connection established on attempt {i+1} in {time.time() - start_time:.2f} seconds")
+            return connection
+        except exc.OperationalError as e:
+            last_exception = e
+            if i == max_retries - 1:
+                logger.error(f"Failed to connect after {max_retries} attempts")
+                raise
+            wait_time = 2 ** i  # Exponential backoff
+            logger.warning(f"Connection attempt {i+1} failed, retrying in {wait_time} seconds...")
+            time.sleep(wait_time)
+    
+    raise last_exception
+
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-    """
+    """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -52,29 +67,6 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
-
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-    """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
-
-
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
+    """Run migrations in 'online' mode."""
+    total_start_time = time.tim

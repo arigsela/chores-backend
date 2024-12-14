@@ -52,6 +52,7 @@ def cleanup_registry(api_client):  # Add api_client as a parameter
     yield registry
     registry.cleanup(api_client)  # Now using the injected api_client
 
+# app/integration_tests/test_integration.py
 def test_full_chores_workflow(api_client, cleanup_registry):
     # Create a child
     child_data = {
@@ -64,11 +65,11 @@ def test_full_chores_workflow(api_client, cleanup_registry):
     child_id = child['id']
     cleanup_registry.register_child(child_id)
 
-    # Create chores
+    # Create chores with frequencies
     chore_ids = []
     chores = [
-        {"name": "Test Chore 1", "description": "Description 1", "points": 5},
-        {"name": "Test Chore 2", "description": "Description 2", "points": 3}
+        {"name": "Test Chore 1", "description": "Description 1", "frequency_per_week": 3},
+        {"name": "Test Chore 2", "description": "Description 2", "frequency_per_week": 2}
     ]
     
     for chore in chores:
@@ -76,10 +77,9 @@ def test_full_chores_workflow(api_client, cleanup_registry):
         assert response.status_code == 200
         chore_id = response.json()['id']
         chore_ids.append(chore_id)
-        cleanup_registry.register_chore(chore_id)  # Added this line to register each chore
+        cleanup_registry.register_chore(chore_id)
 
-
-    # 3. Assign weekly chores
+    # Assign weekly chores
     week_start = datetime.now().date().isoformat()
     assign_response = api_client.post(
         '/api/weekly-assignments/',
@@ -92,26 +92,30 @@ def test_full_chores_workflow(api_client, cleanup_registry):
     
     assert assign_response.status_code == 200
     assignments = assign_response.json()
-    assert len(assignments) == len(chores)
+    # Should have 5 total assignments (3 for first chore + 2 for second chore)
+    assert len(assignments) == 5
 
-    # 4. Complete a chore
-    assignment_id = assignments[0]['id']
-    complete_response = api_client.put(f'/api/assignments/{assignment_id}/complete')
-    assert complete_response.status_code == 200
+    # Complete some assignments
+    for assignment in assignments[:3]:
+        complete_response = api_client.put(f'/api/assignments/{assignment["id"]}/complete')
+        assert complete_response.status_code == 200
 
-    # 5. Verify assignment history
+    # Verify assignment history
     history_response = api_client.get(f'/api/assignments/history/{child_id}')
     assert history_response.status_code == 200
     history = history_response.json()
-    assert len(history) > 0
+    
+    completed_assignments = [a for a in history if a["is_completed"]]
+    assert len(completed_assignments) == 3
 
-    completed_assignment = next(
-        (a for a in history if a['id'] == assignment_id),
-        None
-    )
-    assert completed_assignment is not None
-    assert completed_assignment['is_completed'] == True
-
+    # Verify occurrence numbers are correct
+    chore1_assignments = [a for a in assignments if a["chore_id"] == chore_ids[0]]
+    chore2_assignments = [a for a in assignments if a["chore_id"] == chore_ids[1]]
+    assert len(chore1_assignments) == 3
+    assert len(chore2_assignments) == 2
+    assert {a["occurrence_number"] for a in chore1_assignments} == {1, 2, 3}
+    assert {a["occurrence_number"] for a in chore2_assignments} == {1, 2}
+    
 def test_error_handling(api_client):
     """Test API error responses"""
     

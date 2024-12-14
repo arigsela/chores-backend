@@ -18,7 +18,7 @@ class Chore(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100))
     description = Column(String(255))
-    # Remove child relationship, will be connected through assignments
+    frequency_per_week = Column(Integer, default=1)
     assignments = relationship("ChoreAssignment", back_populates="chore")
 
 class ChoreAssignment(Base):
@@ -30,6 +30,7 @@ class ChoreAssignment(Base):
     week_start_date = Column(Date, index=True)  # To track which week this assignment belongs to
     is_completed = Column(Boolean, default=False)
     completion_date = Column(Date, nullable=True)
+    occurrence_number = Column(Integer, default=1)
     
     # Relationships
     child = relationship("Child", back_populates="chore_assignments")

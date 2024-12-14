@@ -57,9 +57,9 @@ def sample_data(db_session):
 
     # Create test chores
     chores = [
-        Chore(name="Clean Room", description="Make bed and organize"),
-        Chore(name="Do Dishes", description="Load/unload dishwasher"),
-        Chore(name="Take Out Trash", description="Empty all trash bins")
+        Chore(name="Clean Room", description="Make bed and organize", frequency_per_week=1),
+        Chore(name="Do Dishes", description="Load/unload dishwasher", frequency_per_week=7),
+        Chore(name="Take Out Trash", description="Empty all trash bins", frequency_per_week=2)
     ]
     db_session.add_all(chores)
     db_session.commit()
@@ -72,13 +72,16 @@ def sample_data(db_session):
         ChoreAssignment(
             child_id=alice.id,
             chore_id=chores[0].id,
-            week_start_date=week_start
+            week_start_date=week_start,
+            occurrence_number=1
         ),
-        ChoreAssignment(
+        # Multiple assignments for dishes (frequency=7)
+        *[ChoreAssignment(
             child_id=bob.id,
             chore_id=chores[1].id,
-            week_start_date=week_start
-        )
+            week_start_date=week_start,
+            occurrence_number=i+1
+        ) for i in range(7)]
     ]
     db_session.add_all(assignments)
     db_session.commit()

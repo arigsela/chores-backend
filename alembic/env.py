@@ -22,8 +22,9 @@ config.set_section_option(section, "DB_HOST", os.getenv("DB_HOST", ""))
 config.set_section_option(section, "DB_PORT", os.getenv("DB_PORT", ""))
 config.set_section_option(section, "DB_NAME", os.getenv("DB_NAME", ""))
 
-# Add connection timeouts and pool settings
-config.set_section_option(section, "sqlalchemy.pool_timeout", "30")
+print(f"Using database: mysql+pymysql://{os.getenv('DB_USER')}:***@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}")
+
+# Only add pool_recycle since we're using NullPool
 config.set_section_option(section, "sqlalchemy.pool_recycle", "60")
 
 # Interpret the config file for Python logging.
@@ -69,4 +70,28 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    total_start_time = time.tim
+    total_start_time = time.time()
+    
+    # Create SQLAlchemy engine
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    with connect_with_retries(connectable) as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True
+        )
+
+        with context.begin_transaction():
+            context.run_migrations()
+            
+    logger.info(f"Total migration time: {time.time() - total_start_time:.2f} seconds")
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()

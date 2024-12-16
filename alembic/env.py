@@ -32,8 +32,9 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
-from app import models
-target_metadata = models.Base.metadata
+from app.models import chores, user
+from app.models import Base
+target_metadata = Base.metadata
 
 def connect_with_retries(engine, max_retries=3):
     """Attempt to connect to the database with retries"""

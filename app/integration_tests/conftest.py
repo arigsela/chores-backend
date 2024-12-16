@@ -7,7 +7,7 @@ from datetime import date, timedelta
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import Child, Chore, ChoreAssignment
+from app.models.chores import Child, Chore, ChoreAssignment
 
 # Use SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"

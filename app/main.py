@@ -1,38 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .database import engine
-from . import models
-from .routers import chores
-from loguru import logger
-import sys
+from .routers import auth, users, chores
 
-# Configure Loguru
-logger.remove()
-logger.add(
-    sys.stdout,
-    format="{time} {level} {message}",
-    level="INFO",
-    serialize=True  # JSON format for better integration with Loki
-)
+app = FastAPI()
 
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="Chores Tracker API")
-
-# CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include the router
-app.include_router(chores.router)
-
-@app.get("/health")
-async def health_check():
-    logger.info("Health check endpoint accessed")
-    return {"status": "healthy"}
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(chores.router, prefix="/api")

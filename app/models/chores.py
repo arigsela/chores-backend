@@ -19,7 +19,7 @@ class Chore(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100))
     description = Column(String(255))
-    points = Column(Integer)
+    frequency_per_week = Column(Integer, default=1)  # Added this field
     user_id = Column(Integer, ForeignKey("users.id"))
     
     user = relationship("User", back_populates="chores")

@@ -27,9 +27,10 @@ ENV DB_HOST=mysql \
 EXPOSE 8000
 
 # Create an entrypoint script
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
+# Copy entrypoint script first
+COPY entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
 
 # Run the application
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

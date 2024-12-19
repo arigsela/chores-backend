@@ -34,6 +34,8 @@ class ChoreAssignment(Base):
     is_completed = Column(Boolean, default=False)
     completion_date = Column(Date, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    week_start = Column(Date, nullable=False)  # Changed from week_start_date
+    occurrence_number = Column(Integer, default=1)
     
     child = relationship("Child", back_populates="assignments")
     chore = relationship("Chore", back_populates="assignments")

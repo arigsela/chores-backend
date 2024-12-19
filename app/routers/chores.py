@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import date
 from ..dependencies import get_current_user
 from ..database import get_db
 from ..models import Child, Chore, ChoreAssignment, User
@@ -15,6 +16,15 @@ from ..schemas.chores import (
 )
 
 router = APIRouter()
+
+def get_current_user_or_error(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user:
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return current_user
 
 @router.get("/children/", response_model=List[ChildResponse])
 async def get_children(
@@ -82,7 +92,7 @@ async def assign_chores(
             child_id=assignment.child_id,
             chore_id=chore_id,
             user_id=current_user.id,
-            week_start_date=assignment.week_start
+            week_start=assignment.week_start
         )
         db.add(db_assignment)
         assignments.append(db_assignment)
@@ -110,3 +120,28 @@ async def complete_assignment(
     db.commit()
     db.refresh(assignment)
     return assignment
+
+@router.get("/weekly-assignments/{child_id}", response_model=List[ChoreAssignmentResponse])
+async def get_weekly_assignments(
+    child_id: int,
+    week_start: date,
+    current_user: User = Depends(get_current_user_or_error),
+    db: Session = Depends(get_db)
+):
+    # First verify the child belongs to the user
+    child = db.query(Child).filter(
+        Child.id == child_id,
+        Child.user_id == current_user.id
+    ).first()
+    
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    # Fetch assignments for the specific week
+    assignments = db.query(ChoreAssignment).filter(
+        ChoreAssignment.child_id == child_id,
+        ChoreAssignment.user_id == current_user.id,
+        ChoreAssignment.week_start == week_start
+    ).all()
+
+    return assignments

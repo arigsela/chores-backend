@@ -25,7 +25,7 @@ class Chore(ChoreBase):
 class ChoreAssignmentBase(BaseModel):
     chore_id: int
     child_id: int
-    week_start_date: date
+    week_start: date
     occurrence_number: int = 1
 
 class ChoreAssignment(ChoreAssignmentBase):

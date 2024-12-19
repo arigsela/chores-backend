@@ -1,3 +1,4 @@
+# app/dependencies.py
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import Depends, HTTPException, status
@@ -44,3 +45,17 @@ async def get_current_user(
     
     user = db.query(User).filter(User.username == username).first()
     return user
+
+async def get_current_user_or_error(
+    current_user: User | None = Depends(get_current_user)
+) -> User:
+    """
+    Dependency that requires a valid user or raises an HTTP 401 error.
+    """
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return current_user
